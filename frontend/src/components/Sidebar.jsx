@@ -1,54 +1,42 @@
-// frontend/src/components/Sidebar.jsx
 import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { useAuthStore } from "../store/useAuthStore"; // Import useAuthStore
+import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
 import { Users } from "lucide-react";
-import { toast } from "react-hot-toast"; // ⭐ Import toast ⭐
+import { toast } from "react-hot-toast";
 
 const Sidebar = () => {
   const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } =
     useChatStore();
+
   const { onlineUsers } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
 
-  // ⭐ Access the socket instance from useAuthStore ⭐
   const authStore = useAuthStore();
-  const socket = authStore.socket; // Get the socket from the store state
+  const socket = authStore.socket;
 
   useEffect(() => {
     getUsers();
   }, [getUsers]);
 
-  // ⭐ NEW: useEffect for Socket.IO toast listener using the shared socket ⭐
   useEffect(() => {
-    // Ensure the socket is connected and available before trying to listen
     if (!socket || !socket.connected) {
-      // If socket is not connected yet, try again when authUser is set
-      // (This usually happens after checkAuth/login/signup)
       return;
     }
 
-    // Listen for the 'adminOnlineToast' event
     socket.on("adminOnlineToast", (data) => {
       if (data.message) {
         toast.success(data.message, {
-          duration: 3000, // Show for 3 seconds
-          position: "top-center", // You can adjust toast position
+          duration: 3000,
+          position: "top-center",
         });
       }
     });
 
-    // Clean up the socket listener when the component unmounts
-    // or when the socket instance changes (though it typically won't)
     return () => {
-      socket.off("adminOnlineToast"); // Remove the specific listener
-      // DO NOT call socket.disconnect() here!
-      // The socket connection is managed globally by useAuthStore.
-      // Disconnecting it here would affect other parts of your app.
+      socket.off("adminOnlineToast");
     };
-  }, [socket, authStore.authUser]); // Depend on socket and authUser to re-run if they change
-  // This ensures the listener is set up once the socket is ready.
+  }, [socket, authStore.authUser]);
 
   const filteredUsers = showOnlineOnly
     ? users.filter((user) => onlineUsers.includes(user._id))
@@ -63,6 +51,7 @@ const Sidebar = () => {
           <Users className="size-6" />
           <span className="font-medium hidden lg:block">Contacts</span>
         </div>
+        {/* TODO: Online filter toggle */}
         <div className="mt-3 hidden lg:flex items-center gap-2">
           <label className="cursor-pointer flex items-center gap-2">
             <input
@@ -97,17 +86,18 @@ const Sidebar = () => {
             <div className="relative mx-auto lg:mx-0">
               <img
                 src={user.profilePic || "/avatar.png"}
-                alt={user.fullName}
+                alt={user.name}
                 className="size-12 object-cover rounded-full"
               />
               {onlineUsers.includes(user._id) && (
                 <span
-                  className="absolute bottom-0 right-0 size-3 bg-green-500
+                  className="absolute bottom-0 right-0 size-3 bg-green-500 
                   rounded-full ring-2 ring-zinc-900"
                 />
               )}
             </div>
 
+            {/* User info - only visible on larger screens */}
             <div className="hidden lg:block text-left min-w-0">
               <div className="font-medium truncate">{user.fullName}</div>
               <div className="text-sm text-zinc-400">
