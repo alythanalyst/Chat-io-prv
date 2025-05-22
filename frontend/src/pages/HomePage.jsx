@@ -39,7 +39,7 @@ const HomePage = () => {
     );
 
     if (isAdminOnline && !hasAdminToastShownRef.current) {
-      toast.success("Say Hi to Our Admin!", {
+      toast.success("Our Admin is Online right now!", {
         duration: 3000,
         position: "top-center",
       });
