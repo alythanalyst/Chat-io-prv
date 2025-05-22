@@ -6,11 +6,10 @@ import express from "express";
 const app = express();
 const server = http.createServer(app);
 
-// Define the admin user ID
-const ADMIN_USER_ID = "682e7db87b82ee0c1d2a99a4"; // ⭐ Your Admin's User ID ⭐
+// Define the admin user ID - CONFIRMED TO BE THIS ID
+const ADMIN_USER_ID = "682e7db87b82ee0c1d2a99a4";
 
 // Configure CORS for Socket.IO
-// This is crucial for deployment to Render!
 const SOCKET_IO_ORIGIN =
   process.env.NODE_ENV === "production"
     ? process.env.FRONTEND_URL // You will set FRONTEND_URL in Render env vars
@@ -35,16 +34,17 @@ io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
 
   const userId = socket.handshake.query.userId;
-  if (userId) userSocketMap[userId] = socket.id;
+  if (userId) userSocketMap[userId] = socket.id; // ⭐ CRITICAL CHANGE HERE: Use socket.broadcast.emit() ⭐
 
-  // ⭐ NEW: Check if the connected user is the admin and emit a toast event ⭐
   if (userId === ADMIN_USER_ID) {
-    io.emit("adminOnlineToast", { message: "Say Hi to Our Admin!" });
-    console.log("Admin user connected. Emitting toast event.");
-  }
+    // This sends to all connected clients EXCEPT the one that just connected (the admin)
+    socket.broadcast.emit("adminOnlineToast", {
+      message: "Say Hi to Our Admin!",
+    });
+    console.log("Admin user connected. Emitting toast event to other users.");
+  } // io.emit() is used to send events to all the connected clients (including the current one)
 
-  // io.emit() is used to send events to all the connected clients
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  io.emit("getOnlineUsers", Object.keys(userSocketMap)); // This correctly updates everyone's online list
 
   socket.on("disconnect", () => {
     console.log("A user disconnected", socket.id);
