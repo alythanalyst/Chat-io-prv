@@ -1,15 +1,26 @@
+// backend/lib/socket.js
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 
-const ADMIN_USER_ID = "682e7db87b82ee0c1d2a99a4";
-
 const app = express();
 const server = http.createServer(app);
 
+// Define the admin user ID
+const ADMIN_USER_ID = "682e7db87b82ee0c1d2a99a4"; // ⭐ Your Admin's User ID ⭐
+
+// Configure CORS for Socket.IO
+// This is crucial for deployment to Render!
+const SOCKET_IO_ORIGIN =
+  process.env.NODE_ENV === "production"
+    ? process.env.FRONTEND_URL // You will set FRONTEND_URL in Render env vars
+    : "http://localhost:5173"; // For local development
+
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173"],
+    origin: SOCKET_IO_ORIGIN, // Use the dynamic origin
+    methods: ["GET", "POST"], // Explicitly allow methods
+    credentials: true,
   },
 });
 
@@ -26,8 +37,8 @@ io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
   if (userId) userSocketMap[userId] = socket.id;
 
+  // ⭐ NEW: Check if the connected user is the admin and emit a toast event ⭐
   if (userId === ADMIN_USER_ID) {
-    // Emit to all connected clients (excluding the admin themselves if desired, but here we emit to all)
     io.emit("adminOnlineToast", { message: "Say Hi to Our Admin!" });
     console.log("Admin user connected. Emitting toast event.");
   }
