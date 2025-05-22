@@ -1,42 +1,53 @@
 // frontend/src/pages/HomePage.jsx
-import { useEffect } from "react"; // ⭐ Import useEffect ⭐
+import { useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { useAuthStore } from "../store/useAuthStore"; // ⭐ Import useAuthStore ⭐
-import { toast } from "react-hot-toast"; // ⭐ Import toast ⭐
+import { useAuthStore } from "../store/useAuthStore";
+import { toast } from "react-hot-toast";
 
 import Sidebar from "../components/Sidebar";
 import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer";
 
+const ADMIN_USER_ID_FRONTEND = "682e7db87b82ee0c1d2a99a4";
+
 const HomePage = () => {
   const { selectedUser } = useChatStore();
-  const { socket } = useAuthStore(); // ⭐ Get the socket instance from useAuthStore ⭐
 
-  // ⭐ NEW: useEffect for Socket.IO toast listener in HomePage ⭐
+  const { onlineUsers, authUser, socket } = useAuthStore();
+
+  const hasAdminToastShownRef = useRef(false);
+
   useEffect(() => {
-    // Ensure the socket is connected and available before trying to listen
-    if (!socket || !socket.connected) {
-      // If socket is not connected yet, it will connect via checkAuth/login/signup.
-      // This effect will re-run when `socket` changes, and the listener will be set up then.
+    if (!authUser || !socket || !socket.connected) {
+      console.log(
+        "HomePage: AuthUser not set or socket not connected. Skipping admin online check."
+      );
       return;
     }
 
-    // Listen for the 'adminOnlineToast' event
-    socket.on("adminOnlineToast", (data) => {
-      if (data.message) {
-        toast.success(data.message, {
-          duration: 3000, // Show for 3 seconds
-          position: "top-center", // You can adjust toast position
-        });
-      }
-    });
+    if (authUser._id === ADMIN_USER_ID_FRONTEND) {
+      console.log("HomePage: Current user is admin, skipping toast.");
+      return;
+    }
 
-    // Clean up the socket listener when the component unmounts
-    return () => {
-      socket.off("adminOnlineToast"); // Remove the specific listener
-      // DO NOT call socket.disconnect() here! The socket is managed globally by useAuthStore.
-    };
-  }, [socket]); // Depend on 'socket' to re-run this effect if the socket instance changes
+    const isAdminOnline = onlineUsers.includes(ADMIN_USER_ID_FRONTEND);
+    console.log(
+      "HomePage: Is Admin Online?",
+      isAdminOnline,
+      "Toast Shown?",
+      hasAdminToastShownRef.current
+    );
+
+    if (isAdminOnline && !hasAdminToastShownRef.current) {
+      toast.success("Say Hi to Our Admin!", {
+        duration: 3000,
+        position: "top-center",
+      });
+      hasAdminToastShownRef.current = true;
+    } else if (!isAdminOnline && hasAdminToastShownRef.current) {
+      hasAdminToastShownRef.current = false;
+    }
+  }, [onlineUsers, authUser, socket]);
 
   return (
     <div className="h-screen bg-base-200">
